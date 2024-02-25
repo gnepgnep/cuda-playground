@@ -1,2 +1,2 @@
-/usr/local/cuda/bin/nvcc -I/usr/local/cuda/include -L/usr/local/cuda/lib64 -lcudart \
--gencode arch=compute_75,code=sm_75 ./CudaAddBiasRelu/base/tensor.cu -o ./CudaAddBiasRelu/base/tensor
+/usr/local/cuda/bin/nvcc -g -I/usr/local/cuda/include -L/usr/local/cuda/lib64 -lcudart \
+-gencode arch=compute_75,code=sm_75 ./CudaAddBiasRelu/add_bias_relu.cu ./CudaAddBiasRelu/base/GPUTensor.cu -o ./CudaAddBiasRelu/add_bias_relu 

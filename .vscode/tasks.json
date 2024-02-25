@@ -1,0 +1,21 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "CUDA build",
+			"type": "shell",
+			"command": "nvcc",
+			"args": [
+				"-g",
+				"${workspaceFolder}/CudaAddBiasRelu/add_bias_relu.cu",
+				"${workspaceFolder}/CudaAddBiasRelu/base/GPUTensor.cu",
+				"-o",
+				"${workspaceFolder}/CudaAddBiasRelu/add_bias_relu",
+			],
+			"options": {
+				"cwd": "${workspaceFolder}"
+			},
+			"group": "build"
+		}
+	]
+}
