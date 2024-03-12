@@ -47,7 +47,7 @@ int AddBiasRelu1(const float* x, const float* bias, float* y,
     return 0;
 }
 
-int TestAddBiasRelu(const int B, const int N, const int method_id) {
+int TestAddBiasRelu(const int B, const int N, const int method_id, const int run_times = 100) {
     GPUTensor x(D_FLOAT32, {B,N}, true);
     GPUTensor bias(D_FLOAT32, {N}, true);
     GPUTensor y(D_FLOAT32, {B,N}, true);
@@ -83,9 +83,26 @@ int TestAddBiasRelu(const int B, const int N, const int method_id) {
     std::cout <<  "===== " << std::endl;
     std::cout << std::endl;
 
-    
-
-
+    cudaStream_t stream;
+    cudaStreamCreateWithFlags(&stream, cudaEventBlockingSync);
+    std::vector<GPUTensor *> io_list{&x, &bias, &y};
+    auto call_fun0 = [&](const std::vector<GPUTensor *> &io_list){
+        AddBiasRelu0(io_list[0]->data<float>(), io_list[1]->data<float>(),
+                     io_list[2]->data<float>(), B, N, stream);
+    };
+    auto call_fun1 = [&](const std::vector<GPUTensor *> &io_list){
+        AddBiasRelu1(io_list[0]->data<float>(), io_list[1]->data<float>(),
+                     io_list[2]->data<float>(), B, N, stream);
+    };
+    float mem_size_GB = (float)sizeof(float) * (B * N * 2 + N) / (1024 * 1024 * 1024);
+    switch (method_id) {
+        case 0:
+            RunStreamTrueBandwidth(call_fun0, io_list, run_times, stream, mem_size_GB);
+            break;
+        case 1:
+            RunStreamTrueBandwidth(call_fun1, io_list, run_times, stream, mem_size_GB);
+            break;
+    }
     return 0;
 }
 
@@ -111,7 +128,7 @@ int main(int argc, char** argv){
             method_id = std::stoi(argv[++i]);
     }
     cudaSetDevice(device_id);
-    TestAddBiasRelu(B, N, method_id);
+    TestAddBiasRelu(B, N, method_id, run_times);
 
 
     return 0;
