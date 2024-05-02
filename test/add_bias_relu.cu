@@ -1,51 +1,7 @@
 #include "use_tensor.h"
+#include "kernels.cuh"
+#include "use_tensor.h"
 
-template <typename T>
-__global__ void AddBiasRelu0Kernel(const T* x, const T* bias, T* y, const int N) {
-    auto bid = blockIdx.x;
-    auto tid = threadIdx.x;
-    for (auto id = tid; id < N; id += blockDim.x) {
-        float v = (float)x[bid * N + id] + (float)bias[id];
-        v = fmaxf(v, 0);
-        y[bid * N + id] = (T)v;
-    }
-}
-
-int AddBiasRelu0(const float* x, const float* bias, float* y, 
-                        const int B, const int N, cudaStream_t stream) {
-    dim3 grid(B);
-    dim3 block(std::min(N, 1024));
-    AddBiasRelu0Kernel<float><<<grid, block, 0, stream>>>(x, bias, y, N);
-    if (cudaGetLastError() != cudaSuccess){
-        printf("lauch kernel failed");
-        return -1;
-    }
-    return 0;
-}
-
-template <typename T>
-__global__ void AddBiasReluKernel1(const T* x, const T* bias, T* y, const int N, const int Num) {
-    int id = blockDim.x * blockIdx.x + threadIdx.x;
-    if (id < Num) {
-        int bias_id = id % N;
-        float v = (float)x[id] + (float)bias[bias_id];
-        v = fmaxf(v, 0);
-        y[id] = (T)v;
-    }
-}
-
-int AddBiasRelu1(const float* x, const float* bias, float* y, 
-                        const int B, const int N, cudaStream_t stream) {
-    int Num = B * N;
-    dim3 block(std::min(Num, 1024));
-    dim3 grid((Num + block.x - 1) / block.x);
-    AddBiasReluKernel1<float><<<grid, block, 0, stream>>>(x, bias, y, N, Num);
-    if (cudaGetLastError() != cudaSuccess){
-        printf("lauch kernel failed");
-        return -1;
-    }
-    return 0;
-}
 
 int TestAddBiasRelu(const int B, const int N, const int method_id, const int run_times = 100) {
     GPUTensor x(D_FLOAT32, {B,N}, true);
@@ -94,16 +50,16 @@ int TestAddBiasRelu(const int B, const int N, const int method_id, const int run
         AddBiasRelu1(io_list[0]->data<float>(), io_list[1]->data<float>(),
                      io_list[2]->data<float>(), B, N, stream);
     };
-    float mem_size_GB = (float)sizeof(float) * (B * N * 2 + N) / (1024 * 1024 * 1024);
-    switch (method_id) {
-        case 0:
-            RunStreamTrueBandwidth(call_fun0, io_list, run_times, stream, mem_size_GB);
-            break;
-        case 1:
-            RunStreamTrueBandwidth(call_fun1, io_list, run_times, stream, mem_size_GB);
-            break;
-    }
-    return 0;
+    // float mem_size_GB = (float)sizeof(float) * (B * N * 2 + N) / (1024 * 1024 * 1024);
+    // switch (method_id) {
+    //     case 0:
+    //         RunStreamTrueBandwidth(call_fun0, io_list, run_times, stream, mem_size_GB);
+    //         break;
+    //     case 1:
+    //         RunStreamTrueBandwidth(call_fun1, io_list, run_times, stream, mem_size_GB);
+    //         break;
+    // }
+    // return 0;
 }
 
 

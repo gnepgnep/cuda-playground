@@ -4,8 +4,7 @@ __global__
 void HelloFromGPU()
 {
     printf("********************************\n");
-    printf("*        JETSON NANO           *\n");
-    printf("*        PROPERTIES            *\n");
+    printf("*     CHEECK GPU PROPERTIES    *\n");
     printf("********************************\n");
 }
 

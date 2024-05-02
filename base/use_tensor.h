@@ -1,5 +1,5 @@
 #pragma once
-#include "base/GPUTensor.h"
+#include "GPUTensor.h"
 
 using namespace base;
 
@@ -62,5 +62,5 @@ using namespace base;
     cudaDeviceSynchronize();                                                   \
     printf("%s cost time %f ms, R/W size : %fGB, Bandwidth : %fGB/s", #fun,    \
             cost_time, (float)(count), (float)(count)*1000.0f / (cost_time));  \
-    return cost_time;
+    return cost_time;                                                          \
   }()
