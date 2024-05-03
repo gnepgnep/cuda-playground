@@ -7,7 +7,7 @@ mkdir -p build
 cd build
 
 # Generate build files using CMake
-cmake ..
+cmake -DCMAKE_BUILD_TYPE=debug .. 
 
 # Compile the project
 make

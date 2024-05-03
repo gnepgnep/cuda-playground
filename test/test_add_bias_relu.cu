@@ -1,6 +1,5 @@
 #include "use_tensor.h"
 #include "kernels.cuh"
-#include "use_tensor.h"
 
 
 int TestAddBiasRelu(const int B, const int N, const int method_id, const int run_times = 100) {

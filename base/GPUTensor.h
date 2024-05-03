@@ -4,7 +4,16 @@
 #include <vector>
 #include <ctime>
 #include <cmath>
+#include <algorithm>
 
+#define CUDA_CHECK_ERROR(ans) { gpuAssert((ans), __FILE__, __LINE__); }
+
+inline void gpuAssert(cudaError_t code, const char *file, int line, bool abort = true) {
+    if (code != cudaSuccess) {
+        std::cerr << "GPU Error: " << cudaGetErrorString(code) << " at " << file << ":" << line << std::endl;
+        if (abort) exit(code);
+    }
+}
 
 namespace base {
 
@@ -26,14 +35,17 @@ public:
 
     template <typename T>
     T* data() const;
+    template <typename T> 
+    T* get_data(std::string mode) const;
     template <typename T>
     void print_data() const;
     template <typename T>
-    T* data_to_cpu() const;
+    void data_to_cpu(T* gpu_data);
     template <typename T>
     void data_to_gpu(T* cpu_data);
 
     GPUTensor relu() const;
+    GPUTensor transpose() const;
     GPUTensor operator+(const GPUTensor& other) const;
     GPUTensor operator-(const GPUTensor& other) const;
     friend std::ostream& operator<<(std::ostream& os, const GPUTensor& tensor);
@@ -43,6 +55,7 @@ private:
     std::vector<int> shape_;
     bool allocated_;
     void* data_;
+    void* datacpu_;
 
     template <typename T>
     void generate_random_uniform_value(size_t size);
