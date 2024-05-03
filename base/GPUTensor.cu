@@ -227,8 +227,8 @@ GPUTensor GPUTensor::transpose() const {
     GPUTensor result(dtype_, reversed_shape, true);
     float* input = get_data<float>("cpu");
     float* relu_res = result.get_data<float>("cpu");
-    int M = result.shape_[0] - 1;
-    int N = result.shape_[1] - 1;
+    int M = shape_[0] - 1;
+    int N = shape_[1] - 1;
     for (int i = 0; i < M; ++i) {
         for (int j = 0; j < N; ++j) {
             relu_res[j * M + i] = input[i * N + j];
