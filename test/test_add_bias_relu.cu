@@ -23,12 +23,12 @@ int TestAddBiasRelu(const int B, const int N, const int method_id, const int run
     std::cout << "START method id: " << method_id;
     std::cout <<  "===== " << std::endl;
     if (method_id == 0) {
-        AddBiasRelu0(x.data<float>(), bias.data<float>(), y.data<float>(), B, N, nullptr);
+        AddBiasRelu0(x.get_data<float>("cuda"), bias.get_data<float>("cuda"), y.get_data<float>("cuda"), B, N, nullptr);
         cudaDeviceSynchronize();
         std::cout << "y: " << y;
         compare_GPUTensor(expect_y, y);
     } else if (method_id == 1) {
-        AddBiasRelu1(x.data<float>(), bias.data<float>(), y.data<float>(), B, N, nullptr);
+        AddBiasRelu1(x.get_data<float>("cuda"), bias.get_data<float>("cuda"), y.get_data<float>("cuda"), B, N, nullptr);
         cudaDeviceSynchronize();
         std::cout << "y: " << y;
         compare_GPUTensor(expect_y, y);        
