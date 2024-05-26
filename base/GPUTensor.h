@@ -29,20 +29,17 @@ public:
     void deallocate_gpu_memory();
     void random_uniform_value();
     size_t calculate_size() const;
-
     void print_shape() const;
     std::vector<int> shape() const;
 
-    template <typename T>
-    T* data() const;
     template <typename T> 
     T* get_data(std::string mode) const;
     template <typename T>
-    void print_data() const;
+    void print_data();
     template <typename T>
-    void data_to_cpu(T* gpu_data);
+    void data_to_cpu();
     template <typename T>
-    void data_to_gpu(T* cpu_data);
+    void data_to_gpu();
 
     GPUTensor relu() const;
     GPUTensor transpose() const;
@@ -66,5 +63,6 @@ void compare_GPUTensor(const GPUTensor& tensor1, const GPUTensor& tensor2);
 
 std::ostream& operator<<(std::ostream& os, GPUTensor& tensor);
 
-
 }
+
+

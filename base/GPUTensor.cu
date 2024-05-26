@@ -1,4 +1,5 @@
 #include "GPUTensor.h"
+#define Debug 1
 
 using namespace base;
 
@@ -38,22 +39,28 @@ GPUTensor::~GPUTensor(){
     if (allocated_) {
         deallocate_gpu_memory();
     }
+    if (datacpu_ != nullptr) {
+        free(datacpu_);
+        datacpu_ = nullptr; // Optional: Set pointer to null after freeing
+    }
 }
 
 void GPUTensor::allocate_gpu_memory(size_t element_size){
+#ifdef Debug
     std::cout << "Allocating GPU memory for tensor of shape: ";
     print_shape();
     std::cout << std::endl;
-    
+#endif
     CUDA_CHECK_ERROR(cudaMalloc(&data_, calculate_size()*element_size));
 }
 
 void GPUTensor::deallocate_gpu_memory(){
     CUDA_CHECK_ERROR(cudaFree(data_));
-
+#ifdef Debug
     std::cout << "Dellocating GPU memory for tensor of shape: ";
     print_shape();
     std::cout << std::endl;
+#endif
 }
 
 
@@ -70,9 +77,11 @@ void GPUTensor::random_uniform_value() {
             std::cerr << "Unsupported data type" << std::endl;
             std::exit(EXIT_FAILURE);
     }
+#ifdef Debug
     std::cout << "Generated random uniform values for tensor of shape: ";
     print_shape();
     std::cout << std::endl;
+#endif
 }
 
 
@@ -105,6 +114,55 @@ T* GPUTensor::get_data(std::string mode) const {
 
     }
 }
+template int* GPUTensor::get_data<int>(std::string mode) const;
+template float* GPUTensor::get_data<float>(std::string mode) const;
+
+
+template <typename T>
+void GPUTensor::data_to_cpu() {
+    CUDA_CHECK_ERROR(cudaMemcpy(datacpu_, data_, calculate_size() * sizeof(T), cudaMemcpyDeviceToHost));
+}
+template void GPUTensor::data_to_cpu<int>();
+template void GPUTensor::data_to_cpu<float>();
+
+template <typename T>
+void GPUTensor::data_to_gpu() {
+    CUDA_CHECK_ERROR(cudaMemcpy(data_, datacpu_, calculate_size() * sizeof(T), cudaMemcpyHostToDevice));
+}
+template void GPUTensor::data_to_gpu<int>();
+template void GPUTensor::data_to_gpu<float>();
+
+std::vector<int> GPUTensor::shape() const {
+    return shape_;
+}
+
+
+size_t GPUTensor::calculate_size() const {
+
+    size_t size = 1;
+    for (int dim: shape_){
+        size *= dim;
+    }
+    return size;
+}
+
+template <typename T>
+void GPUTensor::generate_random_uniform_value(size_t size){
+    T* host_data = new T[size];
+
+    for (size_t i = 0; i < size; ++i) {
+        T raw_rand = static_cast<T>(rand()) / RAND_MAX;
+        host_data[i] = (raw_rand - 0.5) * 2;
+    }
+    memcpy(datacpu_, host_data, sizeof(T) * size);
+
+    if (allocated_) {
+        CUDA_CHECK_ERROR(cudaMemcpy(data_, host_data, sizeof(T) * size, cudaMemcpyHostToDevice));
+    }
+    
+    delete[] host_data;
+}
+
 
 
 template <typename T>
@@ -117,7 +175,7 @@ __global__ void print_kernel(T* gpuData, int numElements) {
 }
 
 template <typename T>
-void GPUTensor::print_data() const {
+void GPUTensor::print_data() {
     // T* typed_data = get_data<T>("cuda");
 
     T* cpu_data = get_data<T>("cpu");
@@ -158,56 +216,6 @@ void GPUTensor::print_data() const {
     // cudaDeviceSynchronize();
 }
 
-template <typename T>
-void GPUTensor::data_to_cpu(T* gpu_data) {
-    CUDA_CHECK_ERROR(cudaMemcpy(datacpu_, gpu_data, calculate_size() * sizeof(T), cudaMemcpyDeviceToHost));
-}
-
-template <typename T>
-void GPUTensor::data_to_gpu(T* cpu_data) {
-    CUDA_CHECK_ERROR(cudaMemcpy(data_, cpu_data, calculate_size() * sizeof(T), cudaMemcpyHostToDevice));
-}
-
-std::vector<int> GPUTensor::shape() const {
-    return shape_;
-}
-
-template <typename T>
-T* GPUTensor::data() const {
-    if (data_ == nullptr) {
-        return nullptr;
-    }
-
-    return static_cast<T*>(data_);
-}
-
-
-size_t GPUTensor::calculate_size() const {
-
-    size_t size = 1;
-    for (int dim: shape_){
-        size *= dim;
-    }
-    return size;
-}
-
-template <typename T>
-void GPUTensor::generate_random_uniform_value(size_t size){
-    T* host_data = new T[size];
-
-    for (size_t i = 0; i < size; ++i) {
-        T raw_rand = static_cast<T>(rand()) / RAND_MAX;
-        host_data[i] = (raw_rand - 0.5) * 2;
-    }
-    memcpy(datacpu_, host_data, sizeof(T) * size);
-
-    if (allocated_) {
-        CUDA_CHECK_ERROR(cudaMemcpy(data_, host_data, sizeof(T) * size, cudaMemcpyHostToDevice));
-    }
-    
-    delete[] host_data;
-}
-
 GPUTensor GPUTensor::relu() const {
     GPUTensor result(dtype_, shape_, true);
     float* input = get_data<float>("cpu");
@@ -215,7 +223,7 @@ GPUTensor GPUTensor::relu() const {
     for (size_t i = 0; i < calculate_size(); ++i) {
         relu_res[i] = fmaxf(input[i], 0);
     }
-    result.data_to_gpu(relu_res);
+    result.data_to_gpu<float>();
 
     return result;
 }
@@ -227,14 +235,14 @@ GPUTensor GPUTensor::transpose() const {
     GPUTensor result(dtype_, reversed_shape, true);
     float* input = get_data<float>("cpu");
     float* relu_res = result.get_data<float>("cpu");
-    int M = shape_[0] - 1;
-    int N = shape_[1] - 1;
+    int M = shape_[0];
+    int N = shape_[1];  
     for (int i = 0; i < M; ++i) {
         for (int j = 0; j < N; ++j) {
             relu_res[j * M + i] = input[i * N + j];
         }
     }
-    result.data_to_gpu(relu_res);
+    result.data_to_gpu<float>();
 
     return result;
 }
@@ -251,7 +259,7 @@ GPUTensor GPUTensor::operator+(const GPUTensor& other) const {
             add_res[i * shape_[1] + j] = add1[i * shape_[1] + j] + add2[j];
         }
     }
-    result.data_to_gpu(add_res);
+    result.data_to_gpu<float>();
 
     return result;
 }
@@ -268,7 +276,7 @@ GPUTensor GPUTensor::operator-(const GPUTensor& other) const {
             res[i * shape_[1] + j] = data1[i * shape_[1] + j] - data2[i * shape_[1] + j];
         }
     }
-    result.data_to_gpu(res);
+    result.data_to_gpu<float>();
 
     return result;
 }
@@ -279,11 +287,9 @@ void base::compare_GPUTensor(const GPUTensor& tensor1, const GPUTensor& tensor2)
     for (size_t i = 0; i < diff.calculate_size(); ++i) {
         if (diff_cpu[i] != 0) {
             printf("Find diff value in idx: %ld\n", i);
-            delete[] diff_cpu;
             return;
         }
     }
-    delete[] diff_cpu;
     printf("compare_GPUTensor result: same values\n");
 }
 

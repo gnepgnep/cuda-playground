@@ -42,12 +42,12 @@ int TestAddBiasRelu(const int B, const int N, const int method_id, const int run
     cudaStreamCreateWithFlags(&stream, cudaEventBlockingSync);
     std::vector<GPUTensor *> io_list{&x, &bias, &y};
     auto call_fun0 = [&](const std::vector<GPUTensor *> &io_list){
-        AddBiasRelu0(io_list[0]->data<float>(), io_list[1]->data<float>(),
-                     io_list[2]->data<float>(), B, N, stream);
+        AddBiasRelu0(io_list[0]->get_data<float>("cuda"), io_list[1]->get_data<float>("cuda"),
+                     io_list[2]->get_data<float>("cuda"), B, N, stream);
     };
     auto call_fun1 = [&](const std::vector<GPUTensor *> &io_list){
-        AddBiasRelu1(io_list[0]->data<float>(), io_list[1]->data<float>(),
-                     io_list[2]->data<float>(), B, N, stream);
+        AddBiasRelu1(io_list[0]->get_data<float>("cuda"), io_list[1]->get_data<float>("cuda"),
+                     io_list[2]->get_data<float>("cuda"), B, N, stream);
     };
     // float mem_size_GB = (float)sizeof(float) * (B * N * 2 + N) / (1024 * 1024 * 1024);
     // switch (method_id) {
