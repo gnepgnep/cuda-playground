@@ -32,6 +32,7 @@ int TransposeFun0(const float *x, float *y, const int M, const int N, cudaStream
     dim3 grid((N+1)>>5, (M+1)>>5);
     TransposeKernel0<<<grid, block, 0, stream>>>(x, y, M, N);
     // std::cout << "cuda eror: " << cudaGetLastError() << std::endl;
+    CudaRunCheck(cudaGetLastError());
     if (cudaGetLastError() != cudaSuccess) {
         printf("lauch kernel failed\n");
         return -1;

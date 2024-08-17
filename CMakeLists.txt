@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.10)
-project(VecAddCUDA LANGUAGES CXX CUDA)
+project(TORCHCUDA LANGUAGES CXX CUDA)
 
 # Find CUDA
 find_package(CUDA REQUIRED)

@@ -1,18 +1,5 @@
 #pragma once
-#include "GPUTensor.h"
-
-using namespace base;
-
-#define CudaRunCheck(error) \
-    do { \
-        cudaError_t err = (error); \
-        if (err != cudaSuccess) { \
-            fprintf(stderr, "CUDA Error at %s:%d - %s\n", \
-                    __FILE__, __LINE__, cudaGetErrorString(err)); \
-            exit(EXIT_FAILURE); \
-        } \
-    } while(0)
-
+#include "GPUTensor.cuh"
 
 // Function to wrap around any CUDA kernel and measure its execution time for multiple iterations
 #define CUDA_TIME_KERNEL_MULTIPLE(kernel_call, tensor_ptr_list, iterations)  \
@@ -33,7 +20,7 @@ using namespace base;
                                                                              \
             cudaEventSynchronize(stop);                                      \
                                                                              \
-            if (i = 0) continue;                                             \
+            if (i == 0) continue;                                             \
             float milliseconds = 0;                                          \
             cudaEventElapsedTime(&milliseconds, start, stop);                \
             totalTime += milliseconds;                                       \
@@ -48,7 +35,7 @@ using namespace base;
     } while(0)
 
 
-#define RunStreamTrueBandwidth(fun, tensor_ptr_list, run_times, stream, mem_size_GB) \
+#define RunStreamTrueBandwidth(fun, tensor_ptr_list, run_times, stream, mem_size_GB)\
   [&]() -> float {                                                             \
     std::vector<GpuTensor *> temp_tensor_list = tensor_ptr_list;               \
     int input_num = temp_tensor_list.size();                                   \

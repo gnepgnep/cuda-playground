@@ -15,14 +15,12 @@ inline void gpuAssert(cudaError_t code, const char *file, int line, bool abort =
     }
 }
 
-namespace base {
 
-enum DataType {D_FLOAT32, D_INT32};
-
+template <typename T>
 class GPUTensor{
 public:
     
-    GPUTensor(DataType dtype, const std::vector<int>& shape, bool allocateMemory);
+    GPUTensor(const std::vector<int>& shape, bool allocateMemory);
     ~GPUTensor();
 
     void allocate_gpu_memory(size_t element_size);
@@ -32,37 +30,36 @@ public:
     void print_shape() const;
     std::vector<int> shape() const;
 
-    template <typename T> 
+
     T* get_data(std::string mode) const;
-    template <typename T>
     void print_data();
-    template <typename T>
     void data_to_cpu();
-    template <typename T>
     void data_to_gpu();
 
     GPUTensor relu() const;
     GPUTensor transpose() const;
     GPUTensor operator+(const GPUTensor& other) const;
     GPUTensor operator-(const GPUTensor& other) const;
-    friend std::ostream& operator<<(std::ostream& os, const GPUTensor& tensor);
+    friend std::ostream& operator<<(std::ostream& os, const GPUTensor<int>& tensor);
+    friend std::ostream& operator<<(std::ostream& os, const GPUTensor<float>& tensor);
 
 private:
-    DataType dtype_;
     std::vector<int> shape_;
     bool allocated_;
     void* data_;
     void* datacpu_;
 
-    template <typename T>
     void generate_random_uniform_value(size_t size);
 
 };
 
-void compare_GPUTensor(const GPUTensor& tensor1, const GPUTensor& tensor2);
+template <typename T>
+void compare_GPUTensor(const GPUTensor<T>& tensor1, const GPUTensor<T>& tensor2);
 
-std::ostream& operator<<(std::ostream& os, GPUTensor& tensor);
+template <typename T>
+std::ostream& operator<<(std::ostream& os, GPUTensor<T>& tensor);
 
-}
+#include "GPUTensor.hpp" 
+
 
 
