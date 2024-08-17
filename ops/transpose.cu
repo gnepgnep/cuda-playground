@@ -9,7 +9,7 @@ __global__ void TransposeKernel0(const T* x, T* y, const int M, const int N) {
     }
 }
 
-template <typenamee T>
+template <typename T>
 __global__ void TransposeKernel1(const T* x, T* y, const int M, const int N) {
     __shared__ float data[32][32];
     int row_base = blockDim.y * blockIdx.y;

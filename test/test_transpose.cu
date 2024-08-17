@@ -47,15 +47,15 @@ int TestTranspose(const int M, const int N, const int method_id = 0, const int r
         TransposeFun1(io_list[0]->get_data<float>("cuda"), io_list[1]->get_data<float>("cuda"),
                      M, N, stream);
     };
-    // float mem_size_GB = (float)sizeof(float) * (M * N) / (1024 * 1024 * 1024);
-    // switch (method_id) {
-    //     case 0:
-    //         RunStreamTrueBandwidth(call_fun0, io_list, run_times, stream, mem_size_GB);
-    //         break;
-    //     case 1:
-    //         RunStreamTrueBandwidth(call_fun1, io_list, run_times, stream, mem_size_GB);
-    //         break;
-    // }
+    float mem_size_GB = (float)sizeof(float) * (M * N) / (1024 * 1024 * 1024);
+    switch (method_id) {
+        case 0:
+            CUDA_TIME_KERNEL_MULTIPLE(call_fun0, io_list, run_times);
+            break;
+        case 1:
+            CUDA_TIME_KERNEL_MULTIPLE(call_fun1, io_list, run_times);
+            break;
+    }
     return 0;
 }
 

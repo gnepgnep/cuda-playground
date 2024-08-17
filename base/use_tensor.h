@@ -14,6 +14,40 @@ using namespace base;
     } while(0)
 
 
+// Function to wrap around any CUDA kernel and measure its execution time for multiple iterations
+#define CUDA_TIME_KERNEL_MULTIPLE(kernel_call, tensor_ptr_list, iterations)  \
+    do {                                                                     \
+        if (iterations < 2) {                                                \
+          printf("Error: Number of iterations must be at least 2.");         \
+          exit(EXIT_FAILURE);                                                \
+        }                                                                    \
+        cudaEvent_t start, stop;                                             \
+        cudaEventCreate(&start);                                             \
+        cudaEventCreate(&stop);                                              \
+                                                                             \
+        float totalTime = 0.0f;                                              \
+        for (int i = 0; i < iterations; ++i) {                               \
+            cudaEventRecord(start);                                          \
+            kernel_call(tensor_ptr_list);                                    \
+            cudaEventRecord(stop);                                           \
+                                                                             \
+            cudaEventSynchronize(stop);                                      \
+                                                                             \
+            if (i = 0) continue;                                             \
+            float milliseconds = 0;                                          \
+            cudaEventElapsedTime(&milliseconds, start, stop);                \
+            totalTime += milliseconds;                                       \
+        }                                                                    \
+                                                                             \
+        float averageTime = totalTime / iterations;                          \
+        printf("%s average run time %f ms over %d iterations",               \
+                #kernel_call, averageTime, iterations);                      \
+                                                                             \
+        cudaEventDestroy(start);                                             \
+        cudaEventDestroy(stop);                                              \
+    } while(0)
+
+
 #define RunStreamTrueBandwidth(fun, tensor_ptr_list, run_times, stream, mem_size_GB) \
   [&]() -> float {                                                             \
     std::vector<GpuTensor *> temp_tensor_list = tensor_ptr_list;               \
