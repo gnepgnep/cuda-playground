@@ -51,7 +51,7 @@ void GPUTensor<T>::deallocate_gpu_memory(){
 template <typename T>
 void GPUTensor<T>::random_uniform_value() {
     size_t size = calculate_size();
-     generate_random_uniform_value(size);
+    generate_random_uniform_value(size);
 #ifdef Debug
     std::cout << "Generated random uniform values for tensor of shape: ";
     print_shape();
@@ -154,8 +154,8 @@ __global__ void print_kernel(T* gpuData, int numElements) {
 template <typename T>
 void GPUTensor<T>::print_data() {
     // T* typed_data = get_data<T>("cuda");
-
-    T* cpu_data = get_data("cpu");
+    data_to_cpu();
+    T* cpu_data = get_data("cpu"); 
 
     if (shape_.size() == 2) {
         for (int i = 0; i < shape_[0]; ++i) {
@@ -184,13 +184,12 @@ void GPUTensor<T>::print_data() {
         std::cout << std::endl;
     }
 
-    delete[] cpu_data;
 
-    size_t size = calculate_size();
-    int blockSize = 1;
-    int gridSize = size;
-    print_kernel<T><<<gridSize, blockSize>>>(get_data("cuda"), size);
-    cudaDeviceSynchronize();
+    // size_t size = calculate_size();
+    // int blockSize = 1;
+    // int gridSize = size;
+    // print_kernel<T><<<gridSize, blockSize>>>(get_data("cuda"), size);
+    // cudaDeviceSynchronize();
 }
 
 template <typename T>
@@ -211,13 +210,13 @@ GPUTensor<T> GPUTensor<T>::transpose() const {
     std::vector<int> reversed_shape(shape_.size());
     std::reverse_copy(shape_.begin(), shape_.end(), reversed_shape.begin());
     GPUTensor result(reversed_shape, true);
-    float* input = get_data("cpu");
-    float* relu_res = result.get_data("cpu");
+    T* input = get_data("cpu");
+    T* result_cpu = result.get_data("cpu");
     int M = shape_[0];
     int N = shape_[1];  
     for (int i = 0; i < M; ++i) {
         for (int j = 0; j < N; ++j) {
-            relu_res[j * M + i] = input[i * N + j];
+            result_cpu[j * M + i] = input[i * N + j];
         }
     }
     result.data_to_gpu();

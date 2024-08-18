@@ -28,8 +28,12 @@ __global__ void TransposeKernel1(const T* x, T* y, const int M, const int N) {
 }
 
 int TransposeFun0(const float *x, float *y, const int M, const int N, cudaStream_t stream) {
-    dim3 block(32, 32);
-    dim3 grid((N+1)>>5, (M+1)>>5);
+    int bdim_y = M < 32 ? M : 32;
+    int bdim_x = N < 32 ? N : 32;
+    int gdim_y = M < 32 ? 1 : (M+1)>>5;
+    int gdim_x = N < 32 ? 1 : (N+1)>>5;
+    dim3 block(bdim_x, bdim_y);
+    dim3 grid(gdim_x, gdim_y);
     TransposeKernel0<<<grid, block, 0, stream>>>(x, y, M, N);
     // std::cout << "cuda eror: " << cudaGetLastError() << std::endl;
     CudaRunCheck(cudaGetLastError());
