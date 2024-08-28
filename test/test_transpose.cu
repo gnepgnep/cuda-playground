@@ -5,7 +5,7 @@
 #include <filesystem>
 
 std::string CUR_DIR = std::filesystem::path(__FILE__).parent_path().string();
-Logger logger(CUR_DIR+"test_transpose_log.txt");
+Logger logger(CUR_DIR+"_transpose_log.txt");
 
 int TestTranspose(const int M, const int N, const int method_id = 0, const int run_times = 100) {
     logger.log(LogLevel::INFO, "Matrix row: %d, col: %d, method: %d, run times: %d", M, N, method_id, run_times);
@@ -30,11 +30,15 @@ int TestTranspose(const int M, const int N, const int method_id = 0, const int r
         cudaDeviceSynchronize();
         std::cout << "y: " << y;
         compare_GPUTensor(expect_y, y);        
+    } else {
+        TransposeFun2(x.get_data("cuda"), y.get_data("cuda"), M, N, nullptr);
+        cudaDeviceSynchronize();
+        std::cout << "y: " << y;
+        compare_GPUTensor(expect_y, y);  
     }
     std::cout << "===== ";
     std::cout << "END method id: " << method_id;
     std::cout <<  "===== " << std::endl;
-    std::cout << std::endl;
 
     cudaStream_t stream;
     cudaStreamCreateWithFlags(&stream, cudaEventBlockingSync);
@@ -47,6 +51,10 @@ int TestTranspose(const int M, const int N, const int method_id = 0, const int r
         TransposeFun1(io_list[0]->get_data("cuda"), io_list[1]->get_data("cuda"),
                      M, N, stream);
     };
+    auto call_fun2 = [&](const std::vector<GPUTensor<float> *> &io_list){
+        TransposeFun2(io_list[0]->get_data("cuda"), io_list[1]->get_data("cuda"),
+                     M, N, stream);
+    };
 
     switch (method_id) {
         case 0:
@@ -54,6 +62,9 @@ int TestTranspose(const int M, const int N, const int method_id = 0, const int r
             break;
         case 1:
             CUDA_TIME_KERNEL_MULTIPLE(call_fun1, io_list, run_times);
+            break;
+        case 2:
+            CUDA_TIME_KERNEL_MULTIPLE(call_fun2, io_list, run_times);
             break;
     }
     return 0;

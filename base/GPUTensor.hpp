@@ -1,7 +1,7 @@
 #pragma once 
 #include "GPUTensor.cuh"
 
-#define Debug 1
+// #define Debug 1
 
 // using namespace base;
 

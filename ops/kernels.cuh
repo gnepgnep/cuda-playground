@@ -21,3 +21,5 @@ int AddBiasRelu1(const float* x, const float* bias, float* y, const int B, const
 int TransposeFun0(const float *x, float *y, const int M, const int N, cudaStream_t stream);
 
 int TransposeFun1(const float *x, float *y, const int M, const int N, cudaStream_t stream);
+
+int TransposeFun2(const float *x, float *y, const int M, const int N, cudaStream_t stream);

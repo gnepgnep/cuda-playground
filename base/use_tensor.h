@@ -27,7 +27,7 @@
         }                                                                    \
                                                                              \
         float averageTime = totalTime / iterations;                          \
-        printf("%s average run time %f ms over %d iterations",               \
+        printf("%s average run time %f ms over %d iterations\n",               \
                 #kernel_call, averageTime, iterations);                      \
                                                                              \
         cudaEventDestroy(start);                                             \
