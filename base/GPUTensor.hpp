@@ -224,6 +224,25 @@ GPUTensor<T> GPUTensor<T>::transpose() const {
     return result;
 }
 
+
+template <typename T>
+GPUTensor<T> GPUTensor<T>::reduce_sum() const {
+    GPUTensor result({shape_.size()[0]}, true);
+    T* input = get_data("cpu");
+    T* result_cpu = result.get_data("cpu");
+    int M = shape_[0];
+    int N = shape_[1];  
+    for (int i = 0; i < M; ++i) {
+        result_cpu[i] = 0
+        for (int j = 0; j < N; ++j) {
+            result_cpu[i] += input[i * N + j];
+        }
+    }
+    result.data_to_gpu();
+
+    return result;
+}
+
 template <typename T>
 GPUTensor<T> GPUTensor<T>::operator+(const GPUTensor& other) const {
     GPUTensor result(shape_, true);

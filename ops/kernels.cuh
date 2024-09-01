@@ -12,7 +12,7 @@
     } while(0)
 
 
-__global__ void VecAddKernel(const float* A, const float* B, float* C, int N);
+void VecAddKernel(const float* A, const float* B, float* C, int N);
 
 int AddBiasRelu0(const float* x, const float* bias, float* y, const int B, const int N, cudaStream_t stream);
 

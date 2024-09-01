@@ -19,7 +19,7 @@ include_directories(
 # include_directories(${PROJECT_SOURCE_DIR}/include)
 
 # Add CUDA files
-file(GLOB CUDA_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/test/test_transpose.cu)
+file(GLOB CUDA_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/test/test_reduce_sum.cu)
 file(GLOB BASE_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/base/*)
 file(GLOB OPS_CUDA_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/ops/*.cu)
 
@@ -29,7 +29,7 @@ set(EXECUTABLE_OUTPUT_PATH ..)
 # set(CMAKE_BUILD_TYPE Debug)
 
 # Add the executable
-cuda_add_executable(test_transpose ${CUDA_SOURCES} ${BASE_SOURCES} ${OPS_CUDA_SOURCES})
+cuda_add_executable(test_reduce_sum ${CUDA_SOURCES} ${BASE_SOURCES} ${OPS_CUDA_SOURCES})
 
 # Link CUDA libraries
 # target_link_libraries(vecadd ${CUDA_LIBRARIES})

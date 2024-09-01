@@ -38,6 +38,7 @@ public:
 
     GPUTensor relu() const;
     GPUTensor transpose() const;
+    GPUTensor reduce_sum() const;
     GPUTensor operator+(const GPUTensor& other) const;
     GPUTensor operator-(const GPUTensor& other) const;
     friend std::ostream& operator<<(std::ostream& os, const GPUTensor<int>& tensor);
