@@ -2,7 +2,7 @@
 #include "GPUTensor.cuh"
 
 // Function to wrap around any CUDA kernel and measure its execution time for multiple iterations
-#define CUDA_TIME_KERNEL_MULTIPLE(kernel_call, tensor_ptr_list, iterations)  \
+#define CUDA_TIME_KERNEL_MULTIPLE(kernel_call, tensor_ptr_list, iterations, count)  \
     do {                                                                     \
         if (iterations < 2) {                                                \
           printf("Error: Number of iterations must be at least 2.");         \
@@ -20,15 +20,15 @@
                                                                              \
             cudaEventSynchronize(stop);                                      \
                                                                              \
-            if (i == 0) continue;                                             \
+            if (i == 0) continue;                                            \
             float milliseconds = 0;                                          \
             cudaEventElapsedTime(&milliseconds, start, stop);                \
             totalTime += milliseconds;                                       \
         }                                                                    \
                                                                              \
         float averageTime = totalTime / iterations;                          \
-        printf("%s average run time %f ms over %d iterations\n",               \
-                #kernel_call, averageTime, iterations);                      \
+        printf("%s iterations %d: \ntotal run time: %fms, average run time %fms, TOPS: %f\n", \
+                #kernel_call, iterations, totalTime, averageTime, (float)(count)/(averageTime*1e9));           \
                                                                              \
         cudaEventDestroy(start);                                             \
         cudaEventDestroy(stop);                                              \

@@ -12,7 +12,7 @@
     } while(0)
 
 
-void VecAddKernel(const float* A, const float* B, float* C, int N);
+__global__ void VecAddKernel(const float* A, const float* B, float* C, int N);
 
 int AddBiasRelu0(const float* x, const float* bias, float* y, const int B, const int N, cudaStream_t stream);
 
@@ -23,3 +23,17 @@ int TransposeFun0(const float *x, float *y, const int M, const int N, cudaStream
 int TransposeFun1(const float *x, float *y, const int M, const int N, cudaStream_t stream);
 
 int TransposeFun2(const float *x, float *y, const int M, const int N, cudaStream_t stream);
+
+void ReduceFun1(const float *x, float *y, const int M, const int N, cudaStream_t stream);
+
+void ReduceFun2(const float *x, float *y, const int M, const int N, cudaStream_t stream);
+
+void ReduceFun3(const float *x, float *y, const int M, const int N, cudaStream_t stream);
+
+void ReduceFun4(const float *x, float *y, const int M, const int N, cudaStream_t stream);
+
+// void ReduceFun5(const float *x, float *y, const int M, const int N, cudaStream_t stream);
+
+// void ReduceFun6(const float *x, float *y, const int M, const int N, cudaStream_t stream);
+
+// void ReduceFun7(const float *x, float *y, const int M, const int N, cudaStream_t stream);

@@ -9,6 +9,7 @@ find_package(CUDA REQUIRED)
 
 # CUDA architecture configuration
 set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} -gencode arch=compute_75,code=sm_75) # Modify the architecture if needed
+set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -lineinfo")
 
 # Include CUDA headers
 include_directories(${CUDA_INCLUDE_DIRS})

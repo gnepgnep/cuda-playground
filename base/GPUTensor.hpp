@@ -158,29 +158,33 @@ void GPUTensor<T>::print_data() {
     T* cpu_data = get_data("cpu"); 
 
     if (shape_.size() == 2) {
-        for (int i = 0; i < shape_[0]; ++i) {
+        int row = shape_[0] < 5 ? shape_[0] : 5;
+        int col = shape_[1] < 5 ? shape_[1] : 5;
+        for (int i = 0; i < row; ++i) {
             std::cout << "[";
-            for (int j = 0; j < shape_[1]; ++j) {
-                std::cout << cpu_data[i * shape_[1] + j];
-                if (j < shape_[1] - 1) {
+            for (int j = 0; j < col; ++j) {
+                std::cout << cpu_data[i * col + j];
+                if (j < col - 1) {
                     std::cout << ", ";
                 }
             }
-            std::cout << "]";
-            if (i < shape_[0] - 1) {
-                std::cout << std::endl;
-            }
+            if (row < shape_[0]) std::cout << ",...]";
+            else std::cout << "]";
+            if (i < row - 1) std::cout << std::endl;
         }
+        if (col < shape_[1]) std::cout << "\n[...]";
         std::cout << std::endl;
     } else {
+        int row = shape_[0] < 5 ? shape_[0] : 5;
         std::cout << "[";
-        for (int i = 0; i < shape_[0]; ++i) {
+        for (int i = 0; i < row; ++i) {
             std::cout << cpu_data[i];
-            if (i < shape_[0] - 1) {
+            if (i < row - 1) {
                 std::cout << ", ";
             }
         }
-        std::cout << "]";
+        if (row < shape_[0]) std::cout << ",...]";
+        else std::cout << "]";
         std::cout << std::endl;
     }
 
@@ -227,13 +231,13 @@ GPUTensor<T> GPUTensor<T>::transpose() const {
 
 template <typename T>
 GPUTensor<T> GPUTensor<T>::reduce_sum() const {
-    GPUTensor result({shape_.size()[0]}, true);
+    GPUTensor result({shape_[0]}, true);
     T* input = get_data("cpu");
     T* result_cpu = result.get_data("cpu");
     int M = shape_[0];
     int N = shape_[1];  
     for (int i = 0; i < M; ++i) {
-        result_cpu[i] = 0
+        result_cpu[i] = 0; 
         for (int j = 0; j < N; ++j) {
             result_cpu[i] += input[i * N + j];
         }
@@ -250,11 +254,16 @@ GPUTensor<T> GPUTensor<T>::operator+(const GPUTensor& other) const {
     float* add1 = get_data("cpu");
     float* add2 = other.get_data("cpu");
     float* add_res = result.get_data("cpu");
-    size_t idx = calculate_size();
-    for (size_t i = 0; i < shape_[0]; ++i) {
-        for (size_t j = 0; j < shape_[1]; ++j) {
-            add_res[i * shape_[1] + j] = add1[i * shape_[1] + j] + add2[j];
+    if (shape_.size() == 2) {
+        for (size_t i = 0; i < shape_[0]; ++i) {
+            for (size_t j = 0; j < shape_[1]; ++j) {
+                add_res[i * shape_[1] + j] = add1[i * shape_[1] + j] + add2[j];
+            }
         }
+    } else {
+        for (size_t i = 0; i < shape_[0]; ++i) {
+            add_res[i] = add1[i] + add2[i];
+        }  
     }
     result.data_to_gpu();
 
@@ -268,11 +277,16 @@ GPUTensor<T> GPUTensor<T>::operator-(const GPUTensor& other) const {
     float* data1 = get_data("cpu");
     float* data2 = other.get_data("cpu");
     float* res = result.get_data("cpu");
-    size_t idx = calculate_size();
-    for (size_t i = 0; i < shape_[0]; ++i) {
-        for (size_t j = 0; j < shape_[1]; ++j) {
-            res[i * shape_[1] + j] = data1[i * shape_[1] + j] - data2[i * shape_[1] + j];
+    if (shape_.size() == 2) {
+        for (size_t i = 0; i < shape_[0]; ++i) {
+            for (size_t j = 0; j < shape_[1]; ++j) {
+                res[i * shape_[1] + j] = data1[i * shape_[1] + j] - data2[i * shape_[1] + j];
+            }
         }
+    } else {
+        for (size_t i = 0; i < shape_[0]; ++i) {
+            res[i] = data1[i] - data2[i];
+        }   
     }
     result.data_to_gpu();
 
@@ -282,19 +296,38 @@ GPUTensor<T> GPUTensor<T>::operator-(const GPUTensor& other) const {
 template <typename T>
 void compare_GPUTensor(const GPUTensor<T>& tensor1, const GPUTensor<T>& tensor2) {
     GPUTensor diff = tensor1 - tensor2;
-    float* diff_cpu = diff.get_data("cpu");
-    for (size_t i = 0; i < diff.calculate_size(); ++i) {
-        if (diff_cpu[i] != 0) {
-            printf("Find diff value in idx: %ld\n", i);
-            return;
+    float* diff_cpu_ptr = diff.get_data("cpu");
+    std::vector<float> values(diff_cpu_ptr, diff_cpu_ptr + diff.calculate_size());
+
+    // Vector of indices
+    std::vector<size_t> indices(values.size());
+    
+    // Initialize indices to 0, 1, 2, ..., n-1
+    for (size_t i = 0; i < indices.size(); ++i) {
+        indices[i] = i;
+    }
+
+    // Sort the indices based on the values in the `values` vector
+    std::sort(indices.begin(), indices.end(),
+              [&values](size_t i1, size_t i2) { return values[i1] < values[i2]; });
+
+
+    if (values[0] == 0) printf("compare_GPUTensor result: same values\n");
+    else {
+        std::cout << "Find diff: " << std::endl;
+        for (int i = 0; i < indices.size(); i++) {
+            std::cout << "Value: " << values[i] << " (Original index: " << i << ")\n";
+            if (i >= 5) {
+                printf("...\n");
+                return;
+            }
         }
     }
-    printf("compare_GPUTensor result: same values\n");
 }
 
 template <typename T>
 std::ostream& operator<<(std::ostream& os, GPUTensor<T>& tensor) {
-    os << "Shape: ";
+    os << "\nShape: ";
     tensor.print_shape();
     os << "\nData:\n";
     tensor.print_data();

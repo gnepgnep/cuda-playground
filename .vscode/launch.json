@@ -4,7 +4,7 @@
             "name": "CUDA C++: Launch",
             "type": "cuda-gdb",
             "request": "launch",
-            "program": "/root/autodl-tmp/code/torchcuda/test_transpose"
+            "program": "/root/autodl-tmp/code/torchcuda/test_reduce_sum"
         },
 
         {
