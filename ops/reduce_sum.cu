@@ -6,6 +6,7 @@ reduce_kernel4: reduce shared memory, eliminate thread that only read data
 reduce_kernel5: unravel the loop for the last warp avoid syncthread, forceinline avoid shared memory cache
 reduce_kernel6: use warp sync 
 reduce_kernel7: reduce dim > 1024
+reduce_kernel8: use atomic op to get reduced result of a matrix
 */
 
 #include "kernels.cuh"
@@ -27,6 +28,7 @@ __global__ void ReduceKernel1(const T *x, T *y, const int M, const int N) {
     float *data = dynamic_shared_buff;
     data[tid] = tid < N ? (float)x[mi * N + tid]: 0.0f;
     __syncthreads();
+
     for (int s = 1; s < blockDim.x; s*=2) {
         if (tid % (2*s) == 0) data[tid] += data[tid + s];
         __syncthreads();
@@ -49,6 +51,7 @@ __global__ void ReduceKernel2(const T* x, T* y, const int M, const int N) {
     float *data = dynamic_shared_buff;
     data[tid] = tid < N ? (float)x[mi * N + tid] : 0.0f;
     __syncthreads();
+
     for (int s = 1; s < blockDim.x; s*=2) {
         int index = tid * s * 2;
         if (index < blockDim.x) data[index] += data[index + s];
@@ -72,6 +75,7 @@ __global__ void ReduceKernel3(const T* x, T* y, const int M, const int N) {
     float *data = dynamic_shared_buff;
     data[tid] = tid < N ? (float)x[mi * N + tid] : 0.0f;
     __syncthreads();
+
     for (int s = blockDim.x / 2; s > 0; s >>= 1) {
         if (tid < s) data[tid] += data[tid + s];
         __syncthreads();
@@ -95,6 +99,7 @@ __global__ void ReduceKernel4(const T* x, T* y, const int M, const int N) {
     data[tid] = (tid < N ? (float)x[mi * N + tid] : 0.0f) + \
                 (tid + blockDim.x < N ? (float)x[mi * N + tid + blockDim.x] : 0.0f);
     __syncthreads();
+
     for (int s = blockDim.x / 2; s > 0; s >>= 1) {
         if (tid < s) data[tid] += data[tid + s];
         __syncthreads();
@@ -127,6 +132,7 @@ __global__ void ReduceKernel5(const T* x, T* y, const int M, const int N) {
     data[tid] = (tid < N ? (float)x[mi * N + tid] : 0.0f) + \
                 (tid + blockDim.x < N ? (float)x[mi * N + tid + blockDim.x] : 0.0f);
     __syncthreads();
+
     for (int s = blockDim.x / 2; s > 32; s >>=1) {
         if (tid < s) data[tid] += data[tid + s];
         __syncthreads();
@@ -159,6 +165,7 @@ __global__ void ReduceKernel6(const T *x, T *y, const int M, const int N) {
     float v = ((tid < N) ? (float)x[mi * N + tid] : 0.0f) + \
                 ((tid + blockDim.x < N) ? (float)x[mi * N + tid + blockDim.x] : 0.0f);
     __syncthreads();
+
     auto sum = WarpReduceUseShuffle(v);
     __shared__ float buff[32];
     int wid = threadIdx.x >> 5;
@@ -186,6 +193,7 @@ __global__ void ReduceKernel7(const T *x, T *y, const int M, const int N) {
     float v = 0.0f;
     for (int id = tid; id < N; id += blockDim.x) v += (float)x[mi * N + id];
     __syncthreads();
+
     auto sum = WarpReduceUseShuffle(v);
     __shared__ float buff[32];
     int wid = threadIdx.x >> 5;
@@ -203,5 +211,35 @@ void ReduceFun7(const float* x, float* y, const int M, const int N, cudaStream_t
     int block_size = std::min((N + 1) / 2, 1024);
     block_size = (block_size + 31) / 32 * 32;
     ReduceKernel7<float><<<M, block_size, 0, stream>>>(x, y, M, N);
+    CudaRunCheck(cudaGetLastError());
+}
+
+template <typename T>
+__global__ void ReduceKernel8(const T *x, T *y, const int M, const int N) {
+    int tid = threadIdx.x;
+    int mi = blockIdx.x;
+    float v = 0.0f;
+    for (int id = tid; id < N; id += blockDim.x) v += (float)x[mi * N + id];
+    __syncthreads();
+
+    auto sum = WarpReduceUseShuffle(v);
+    __shared__ float buff[32];
+    int wid = threadIdx.x >> 5;
+    int lane_id = tid & 0x1f;
+    if (lane_id == 0) buff[wid] = sum;
+    __syncthreads();
+
+    if (tid < 32) {
+        v = tid < (blockDim.x >> 5) ? buff[tid] : 0.0f;
+        sum = WarpReduceUseShuffle(v);
+        if(tid == 0) atomicAdd(&y[0], sum);
+    }
+}
+
+void ReduceFun8(const float* x, float* y, const int M, const int N, cudaStream_t stream) {
+    int block_size = std::min((N + 1) / 2, 1024);
+    block_size = (block_size + 31) / 32 * 32;
+    cudaMemset(&y[0], 0, sizeof(float)); 
+    ReduceKernel8<float><<<M, block_size, 0, stream>>>(x, y, M, N);
     CudaRunCheck(cudaGetLastError());
 }

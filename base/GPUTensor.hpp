@@ -205,6 +205,9 @@ void GPUTensor<T>::print_data() {
 template <typename T>
 GPUTensor<T> GPUTensor<T>::deep_copy() const {
     GPUTensor result(shape_, true);
+    size_t size = calculate_size();
+    memcpy(result.datacpu_, datacpu_, sizeof(T)*size);
+    CUDA_CHECK_ERROR(cudaMemcpy(result.data_, data_, sizeof(T) * size, cudaMemcpyDeviceToDevice));
     return result;
 }
 
@@ -246,8 +249,8 @@ GPUTensor<T> GPUTensor<T>::reduce_sum() const {
     GPUTensor result({shape_[0]}, true);
     T* input = get_data("cpu");
     T* result_cpu = result.get_data("cpu");
-    int M = shape_[0];
-    int N = shape_[1];  
+    int M = (shape_.size() == 2) ? shape_[0] : 1;
+    int N = (shape_.size() == 2) ? shape_[1] : shape_[0];  
     for (int i = 0; i < M; ++i) {
         result_cpu[i] = 0; 
         for (int j = 0; j < N; ++j) {

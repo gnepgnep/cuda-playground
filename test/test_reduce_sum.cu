@@ -15,6 +15,10 @@ int TestReduce(const int M, const int N, const int method_id = 0, const int run_
     std::cout << "x: " << x;
     auto expect_y = x.reduce_sum();
     std::cout << "expect_y: " << expect_y;
+    if (method_id == 8) {
+        auto sum_y = expect_y.reduce_sum();
+        std::cout << "sum_y: " << sum_y;
+    }
 
     std::cout << std::endl;
     std::cout << "===== ";
@@ -45,6 +49,9 @@ int TestReduce(const int M, const int N, const int method_id = 0, const int run_
                 break;
             case 7:
                 ReduceFun7(io_list[0]->get_data("cuda"), io_list[1]->get_data("cuda"), M, N, stream);
+                break;
+            case 8:
+                ReduceFun8(io_list[0]->get_data("cuda"), io_list[1]->get_data("cuda"), M, N, stream);
                 break;
             default:
                 logger.log(LogLevel::ERROR, "unsupport method id: %d", method_id);
