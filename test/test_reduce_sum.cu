@@ -37,15 +37,15 @@ int TestReduce(const int M, const int N, const int method_id = 0, const int run_
             case 4:
                 ReduceFun4(io_list[0]->get_data("cuda"), io_list[1]->get_data("cuda"), M, N, stream);
                 break;
-            // case 5:
-            //     ReduceFun5(io_list[0]->get_data("cuda"), io_list[1]->get_data("cuda"), M, N, stream);
-            //     break;
-            // case 6:
-            //     ReduceFun6(io_list[0]->get_data("cuda"), io_list[1]->get_data("cuda"), M, N, stream);
-            //     break;
-            // case 7:
-            //     ReduceFun7(io_list[0]->get_data("cuda"), io_list[1]->get_data("cuda"), M, N, stream);
-            //     break;
+            case 5:
+                ReduceFun5(io_list[0]->get_data("cuda"), io_list[1]->get_data("cuda"), M, N, stream);
+                break;
+            case 6:
+                ReduceFun6(io_list[0]->get_data("cuda"), io_list[1]->get_data("cuda"), M, N, stream);
+                break;
+            case 7:
+                ReduceFun7(io_list[0]->get_data("cuda"), io_list[1]->get_data("cuda"), M, N, stream);
+                break;
             default:
                 logger.log(LogLevel::ERROR, "unsupport method id: %d", method_id);
                 return -1;

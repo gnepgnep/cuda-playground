@@ -34,6 +34,6 @@ void ReduceFun4(const float *x, float *y, const int M, const int N, cudaStream_t
 
 void ReduceFun5(const float *x, float *y, const int M, const int N, cudaStream_t stream);
 
-// void ReduceFun6(const float *x, float *y, const int M, const int N, cudaStream_t stream);
+void ReduceFun6(const float *x, float *y, const int M, const int N, cudaStream_t stream);
 
-// void ReduceFun7(const float *x, float *y, const int M, const int N, cudaStream_t stream);
+void ReduceFun7(const float *x, float *y, const int M, const int N, cudaStream_t stream);

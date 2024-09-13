@@ -27,6 +27,7 @@ public:
     void deallocate_gpu_memory();
     void random_uniform_value();
     size_t calculate_size() const;
+    size_t mem_size() const;
     void print_shape() const;
     std::vector<int> shape() const;
 
@@ -36,6 +37,8 @@ public:
     void data_to_cpu();
     void data_to_gpu();
 
+
+    GPUTensor deep_copy() const;
     GPUTensor relu() const;
     GPUTensor transpose() const;
     GPUTensor reduce_sum() const;

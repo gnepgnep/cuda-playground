@@ -124,6 +124,12 @@ size_t GPUTensor<T>::calculate_size() const {
 }
 
 template <typename T>
+size_t GPUTensor<T>::mem_size() const {
+    size_t size = sizeof(T) * calculate_size();
+    return size;
+}
+
+template <typename T>
 void GPUTensor<T>::generate_random_uniform_value(size_t size){
     T* host_data = new T[size];
 
@@ -168,11 +174,11 @@ void GPUTensor<T>::print_data() {
                     std::cout << ", ";
                 }
             }
-            if (row < shape_[0]) std::cout << ",...]";
+            if (col < shape_[1]) std::cout << ",...]";
             else std::cout << "]";
             if (i < row - 1) std::cout << std::endl;
         }
-        if (col < shape_[1]) std::cout << "\n[...]";
+        if (row < shape_[0]) std::cout << "\n[...]";
         std::cout << std::endl;
     } else {
         int row = shape_[0] < 5 ? shape_[0] : 5;
@@ -194,6 +200,12 @@ void GPUTensor<T>::print_data() {
     // int gridSize = size;
     // print_kernel<T><<<gridSize, blockSize>>>(get_data("cuda"), size);
     // cudaDeviceSynchronize();
+}
+
+template <typename T>
+GPUTensor<T> GPUTensor<T>::deep_copy() const {
+    GPUTensor result(shape_, true);
+    return result;
 }
 
 template <typename T>
@@ -314,7 +326,7 @@ void compare_GPUTensor(const GPUTensor<T>& tensor1, const GPUTensor<T>& tensor2)
 
     if (values[0] == 0) printf("compare_GPUTensor result: same values\n");
     else {
-        std::cout << "Find diff: " << std::endl;
+        std::cout << "Find top diff: " << std::endl;
         for (int i = 0; i < indices.size(); i++) {
             std::cout << "Value: " << values[i] << " (Original index: " << i << ")\n";
             if (i >= 5) {
