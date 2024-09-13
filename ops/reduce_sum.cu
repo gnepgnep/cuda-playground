@@ -108,3 +108,37 @@ void ReduceFun4(const float *x, float *y, const int M, const int N, cudaStream_t
     ReduceKernel4<<<M, block_size, shared_mem_size, stream>>>(x, y, M, N);
     CudaRunCheck(cudaGetLastError());
 }
+
+// use volatile to avoid cache shared memory in register, ensure data update consistent
+__device__ __forceinline__ void WarpReduce(volatile float* data, int tid) {
+    data[tid] += data[tid + 32];
+    data[tid] += data[tid + 16];
+    data[tid] += data[tid + 8];
+    data[tid] += data[tid + 4];
+    data[tid] += data[tid + 2];
+    data[tid] += data[tid + 1];
+}
+
+template <typename T>
+__global__ void ReduceKernel5(const T* x, T* y, const int M, const int N) {
+    int tid = threadIdx.x;
+    int mi = blockIdx.x;
+    float *data = dynamic_shared_buff;
+    data[tid] = (tid < N ? (float)x[mi * N + tid] : 0.0f) + \
+                (tid + blockDim.x < N ? (float)x[mi * N + tid + blockDim.x] : 0.0f);
+    __syncthreads();
+    for (int s = blockDim.x / 2; s > 32; s >>=1) {
+        if (tid < s) data[tid] += data[tid + s];
+        __syncthreads();
+    }
+
+    if (tid < 32) WarpReduce(data, tid);
+    if (tid == 0) y[mi] = data[0]
+}
+
+void ReduceFun5(const float *x, float *y, const in M, const int N, cudaStream_t stream) {
+    int block_size = CalcBlockSize(N);
+    int shared_mem_size = sizeof(float) * block_size;
+    ReduceKernel5<<<M, block_size, shared_mem_size, stream>>>(x, y, M, N);
+    CudaRunCheck(cudaGetLastError());
+}
