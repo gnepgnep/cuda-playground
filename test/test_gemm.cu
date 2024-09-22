@@ -3,9 +3,10 @@
 #include "kernels.cuh"
 #include <string>
 #include <filesystem>
+#include <functional>
 
 
-std::string CUR_DIR = std::filesystem::path(__FILE__).parent_path().string();
+std::string CUR_DIR = "/root/autodl-tmp/torchcuda"; //std::filesystem::path(__FILE__).parent_path().string();
 Logger logger(CUR_DIR+"_reduce_sum_log.txt");
 
 int TestGemm(const int M, const int N, const int K, const int method_id = 0, const int run_times = 100) {
@@ -22,51 +23,27 @@ int TestGemm(const int M, const int N, const int K, const int method_id = 0, con
     std::cout << "expect_C: " << expect_C;
 
 
-    // std::cout << std::endl;
-    // std::cout << "===== ";
-    // std::cout << "START method id: " << method_id;
-    // std::cout <<  "===== " << std::endl;
+    std::cout << std::endl;
+    std::cout << "===== ";
+    std::cout << "START method id: " << method_id;
+    std::cout <<  "===== " << std::endl;
 
-    // cudaStream_t stream;
-    // cudaStreamCreateWithFlags(&stream, cudaEventBlockingSync);
-    // auto call_fun = [&](const std::vector<GPUTensor<float> *> io_list) -> int {
-    //     switch (method_id){
-    //         case 1:
-    //             ReduceFun1(io_list[0]->get_data("cuda"), io_list[1]->get_data("cuda"), M, N, stream);
-    //             break;
-    //         case 2:
-    //             ReduceFun2(io_list[0]->get_data("cuda"), io_list[1]->get_data("cuda"), M, N, stream);
-    //             break;
-    //         case 3:
-    //             ReduceFun3(io_list[0]->get_data("cuda"), io_list[1]->get_data("cuda"), M, N, stream);
-    //             break;
-    //         case 4:
-    //             ReduceFun4(io_list[0]->get_data("cuda"), io_list[1]->get_data("cuda"), M, N, stream);
-    //             break;
-    //         case 5:
-    //             ReduceFun5(io_list[0]->get_data("cuda"), io_list[1]->get_data("cuda"), M, N, stream);
-    //             break;
-    //         case 6:
-    //             ReduceFun6(io_list[0]->get_data("cuda"), io_list[1]->get_data("cuda"), M, N, stream);
-    //             break;
-    //         case 7:
-    //             ReduceFun7(io_list[0]->get_data("cuda"), io_list[1]->get_data("cuda"), M, N, stream);
-    //             break;
-    //         case 8:
-    //             ReduceFun8(io_list[0]->get_data("cuda"), io_list[1]->get_data("cuda"), M, N, stream);
-    //             break;
-    //         default:
-    //             logger.log(LogLevel::ERROR, "unsupport method id: %d", method_id);
-    //             return -1;
-    //     }
-    //     return 0;
-    // };
+    cudaStream_t stream;
+    cudaStreamCreateWithFlags(&stream, cudaEventBlockingSync);
 
-    // std::vector<GPUTensor<float> *> io_list{&x, &y};
-    // int opts = M * N;
-    // CUDA_TIME_KERNEL_MULTIPLE(call_fun, io_list, run_times, opts);
-    // std::cout << "y: " << y;
-    // compare_GPUTensor(expect_y, y);  
+    using GemmFun = 
+        std::function<void(const int, const int, const int, const float *,
+                    const float *, float *, cudaStream_t)>;
+    std::vector<GemmFun> fun_list = {gemm0};
+    std::vector<GPUTensor<float> *> io_list = {&A, &B, &C};
+    auto call_fun = [&](const std::vector<GPUTensor<float> *> io_list) {
+        fun_list[method_id](M, N, K, io_list[0]->get_data("cuda"), io_list[1]->get_data("cuda"), io_list[2]->get_data("cuda"), stream);
+    };
+
+    int opts = 2 * M * N * K;
+    CUDA_TIME_KERNEL_MULTIPLE(call_fun, io_list, run_times, opts);
+    std::cout << "C: " << C;
+    compare_GPUTensor(expect_C, C);  
 
     return 0;
 }

@@ -331,7 +331,7 @@ GPUTensor<T> GPUTensor<T>::operator-(const GPUTensor& other) const {
 
 template <typename T>
 void compare_GPUTensor(const GPUTensor<T>& tensor1, const GPUTensor<T>& tensor2) {
-    GPUTensor diff = tensor1 - tensor2;
+    GPUTensor<T> diff = tensor1 - tensor2;
     float* diff_cpu_ptr = diff.get_data("cpu");
     std::vector<float> values(diff_cpu_ptr, diff_cpu_ptr + diff.calculate_size());
 
