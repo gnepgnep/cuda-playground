@@ -60,6 +60,17 @@ void GPUTensor<T>::random_uniform_value() {
 }
 
 template <typename T>
+void GPUTensor<T>::fill_zero() {
+    size_t size = calculate_size();
+    fill_zero_value(size);
+#ifdef Debug
+    std::cout << "Fill zero values for tensor of shape: ";
+    print_shape();
+    std::cout << std::endl;
+#endif
+}
+
+template <typename T>
 void GPUTensor<T>::print_shape() const {
     std::cout << "(";
     for (size_t i = 0; i < shape_.size(); ++i){
@@ -146,6 +157,16 @@ void GPUTensor<T>::generate_random_uniform_value(size_t size){
     delete[] host_data;
 }
 
+template <typename T>
+void GPUTensor<T>::fill_zero_value(size_t size) {
+
+    memset(datacpu_, 0, sizeof(T) * size);
+
+    if (allocated_) {
+        CUDA_CHECK_ERROR(cudaMemcpy(data_, datacpu_, sizeof(T) * size, cudaMemcpyHostToDevice));
+    }
+    
+}
 
 
 template <typename T>
@@ -338,6 +359,37 @@ void compare_GPUTensor(const GPUTensor<T>& tensor1, const GPUTensor<T>& tensor2)
             }
         }
     }
+}
+
+
+template <typename T>
+GPUTensor<T> matmul(const GPUTensor<T>& tensor1, const GPUTensor<T>& tensor2) {
+    int M = tensor1.shape()[0];
+    int N = tensor2.shape()[1];
+    int K = tensor1.shape()[1];
+    if (tensor1.shape()[1] != tensor2.shape()[0]) {
+        std::cout << "Can perform matmul on tensor of shape: " << tensor1.shape()[1] << "," << tensor2.shape()[0] << std::endl;
+        exit(EXIT_FAILURE);
+    }
+
+    T* t1_cpu = tensor1.get_data("cpu");
+    T* t2_cpu = tensor2.get_data("cpu");
+    std::vector<int> shape{M, N};
+    GPUTensor<T> result(shape, true);
+    result.fill_zero();
+    T* result_cpu = result.get_data("cpu");
+
+    for (int i = 0; i < M; i++) {
+        for (int j = 0; j < N; j++) {
+            for (int k = 0; k < K; k++) {
+                result_cpu[i* M + j] += t1_cpu[i * M + k] * t2_cpu[k * K + j];
+            }
+        }
+    }
+
+    result.data_to_gpu();
+
+    return result;
 }
 
 template <typename T>

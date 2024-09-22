@@ -26,6 +26,7 @@ public:
     void allocate_gpu_memory(size_t element_size);
     void deallocate_gpu_memory();
     void random_uniform_value();
+    void fill_zero();
     size_t calculate_size() const;
     size_t mem_size() const;
     void print_shape() const;
@@ -54,11 +55,15 @@ private:
     void* datacpu_;
 
     void generate_random_uniform_value(size_t size);
+    void fill_zero_value(size_t size);
 
 };
 
 template <typename T>
 void compare_GPUTensor(const GPUTensor<T>& tensor1, const GPUTensor<T>& tensor2);
+
+template <typename T>
+GPUTensor<T> matmul(const GPUTensor<T>& tensor1, const GPUTensor<T>& tensor2);
 
 template <typename T>
 std::ostream& operator<<(std::ostream& os, GPUTensor<T>& tensor);

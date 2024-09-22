@@ -5,7 +5,8 @@ project(TORCHCUDA LANGUAGES CXX CUDA)
 find_package(CUDA REQUIRED)
 
 # set c++ standard
-# set(CMAKE_CXX_STANDARD 11)
+# set(CMAKE_CXX_STANDARD 17)
+
 
 # CUDA architecture configuration
 set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} -gencode arch=compute_75,code=sm_75) # Modify the architecture if needed
@@ -20,7 +21,7 @@ include_directories(
 # include_directories(${PROJECT_SOURCE_DIR}/include)
 
 # Add CUDA files
-file(GLOB CUDA_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/test/test_reduce_sum.cu)
+file(GLOB CUDA_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/test/test_gemm.cu)
 file(GLOB BASE_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/base/*)
 file(GLOB OPS_CUDA_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/ops/*.cu)
 
