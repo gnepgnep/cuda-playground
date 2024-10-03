@@ -42,7 +42,7 @@ void ReduceFun8(const float *x, float *y, const int M, const int N, cudaStream_t
 
 void gemm0(const int M, const int N, const int K, const float* A, const float* B, float* C, cudaStream_t stream);
 
-// void gemm1(const int M, const int N, const int K, float* A, float* B, float* C, cudaStream_t stream);
+void gemm1(const int M, const int N, const int K, const float* A, const float* B, float* C, cudaStream_t stream);
 
 // void gemm2(const int M, const int N, const int K, float* A, float* B, float* C, cudaStream_t stream);
 
