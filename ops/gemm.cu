@@ -1,10 +1,9 @@
 /*
 gemm0: origin implemetation
 gemm1: with shared memory
-gemm2: with register, increase op/mem access
-gemm3: with compact shared mem access: using float4
-gemm4: using tensor core
-gemm5: increase op/mem access of gemm4
+gemm2: with register and compact shared mem access: using float4
+gemm3: using tensor core
+gemm4: increase op/mem access of gemm4
 */
 #include "kernels.cuh"
 
@@ -69,5 +68,88 @@ void gemm1(const int M, const int N, const int K, const float* A, const float* B
     dim3 block(32,32,1);
     dim3 grid((N+31) / 32, (M+31) / 32);
     GemmKernel1<float,32,32,32><<<grid, block, 0, stream>>>(M, N, K, C, A, B);
+    CudaRunCheck(cudaGetLastError());
+}
+
+
+template <typename T, int BX = 16, int BY = 16, int TILE_M = 64, int TILE_N = 64, int TILE_K = 16>
+__global__ void GemmKernel2(
+    const int M, const int N, const int K, 
+    T *__restrict__ C, const T *__restrict__ A, const T *__restrict__ B) {
+    int tx = threadIdx.x;
+    int ty = threadIdx.y;
+    int m_offset = blockIdx.y * TILE_M;
+    int n_offset = blockIdx.x * TILE_N;
+    int k_offset = 0;
+
+    __shared__ float4 lbuff[BY][TILE_K], rbuff[TILE_K][BX];
+    float reg[4][4] = {0.0f};
+    float lreg[4], rreg[4];
+
+    while (k_offset < K) {
+        if (m_offset + TILE_M <= M && n_offset + TILE_N <= N && k_offset + TILE_K <= K) {
+            // load A
+            auto cur_A = A + ((m_offset + ty) * K + k_offset + tx);
+            lbuff[ty][tx].x = (float)(*cur_A);
+            cur_A += BY * K;
+            lbuff[ty][tx].y = (float)(*cur_A);
+            cur_A += BY * K;
+            lbuff[ty][tx].z = (float)(*cur_A);
+            cur_A += BY * K;
+            lbuff[ty][tx].w = (float)(*cur_A);
+
+            // load B
+            auto cur_B = B + ((k_offset + ty) * N + n_offset + tx);
+            rbuff[ty][tx].x = (float)(*cur_B);
+            cur_B += BX;
+            rbuff[ty][tx].y = (float)(*cur_B);
+            cur_B += BX;
+            rbuff[ty][tx].z = (float)(*cur_B);
+            cur_B += BX;
+            rbuff[ty][tx].w = (float)(*cur_B);
+        } else {
+        }
+        __syncthreads();
+
+        for (int ki = 0; ki < TILE_K; ++ki) {
+            *(reinterpret_cast<float4 *>(lreg)) = lbuff[ty][ki];
+            *(reinterpret_cast<float4 *>(rreg)) = rbuff[ki][tx];
+            for (int i = 0; i < 4; ++i) {
+                for (int j = 0; j < 4; ++j) {
+                    reg[i][j] += lreg[i] * rreg[j];
+                }
+            }
+        }
+        __syncthreads();
+
+        k_offset += TILE_K;
+    }
+    if (m_offset + TILE_M <= M && n_offset + TILE_N <= N) {
+        for (int i = 0; i < 4; ++i) {
+            for (int j = 0; j < 4; ++j) {
+                int mi = m_offset + i * BY + ty;
+                int ni = n_offset + j * BX + tx;
+                C[mi * N + ni] = reg[i][j];
+            }
+        }
+    } else {
+        for (int i = 0; i < 4; ++i) {
+            for (int j = 0; j < 4; ++j) {
+                int mi = m_offset + i * BY + ty;
+                int ni = n_offset + j * BX + tx;
+                if (mi < M && ni < N) {
+                    C[mi * N + ni] = reg[i][j];
+                }
+            }
+        }        
+    }
+}
+
+void gemm2(const int M, const int N, const int K, const float* A, const float* B, float* C, cudaStream_t stream) {
+    constexpr int BXY = 16;
+    constexpr int TILE = 64;
+    dim3 block(BXY, BXY, 1);
+    dim3 grid((N+TILE-1)/TILE, (M+TILE-1)/TILE);
+    GemmKernel2<float, BXY, BXY, TILE, TILE, BXY><<<grid, block, 0, stream>>>(M, N, K, C, A, B);
     CudaRunCheck(cudaGetLastError());
 }

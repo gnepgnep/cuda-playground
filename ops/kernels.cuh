@@ -44,10 +44,4 @@ void gemm0(const int M, const int N, const int K, const float* A, const float* B
 
 void gemm1(const int M, const int N, const int K, const float* A, const float* B, float* C, cudaStream_t stream);
 
-// void gemm2(const int M, const int N, const int K, float* A, float* B, float* C, cudaStream_t stream);
-
-// void gemm3(const int M, const int N, const int K, float* A, float* B, float* C, cudaStream_t stream);
-
-// void gemm4(const int M, const int N, const int K, float* A, float* B, float* C, cudaStream_t stream);
-
-// void gemm5(const int M, const int N, const int K, float* A, float* B, float* C, cudaStream_t stream);
+void gemm2(const int M, const int N, const int K, const float* A, const float* B, float* C, cudaStream_t stream);
