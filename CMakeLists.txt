@@ -18,7 +18,7 @@ include_directories(
     ${CMAKE_CURRENT_SOURCE_DIR}/ops 
     ${CMAKE_CURRENT_SOURCE_DIR}/base
 )
-# include_directories(${PROJECT_SOURCE_DIR}/include)
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/cutlass/include)
 
 # Add CUDA files
 file(GLOB CUDA_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/test/test_gemm.cu)
@@ -31,7 +31,7 @@ set(EXECUTABLE_OUTPUT_PATH ..)
 # set(CMAKE_BUILD_TYPE Debug)
 
 # Add the executable
-cuda_add_executable(test_reduce_sum ${CUDA_SOURCES} ${BASE_SOURCES} ${OPS_CUDA_SOURCES})
+cuda_add_executable(test_gemm ${CUDA_SOURCES} ${BASE_SOURCES} ${OPS_CUDA_SOURCES})
 
 # Link CUDA libraries
 # target_link_libraries(vecadd ${CUDA_LIBRARIES})

@@ -8,6 +8,8 @@ gemm4: increase op/mem access of gemm4
 #include "kernels.cuh"
 #include <mma.h>
 #include <cuda_fp16.h>
+#include <cutlass/cutlass.h>
+#include <cutlass/gemm/device/gemm.h>
 
 using namespace nvcuda;
 
@@ -115,10 +117,13 @@ __global__ void GemmKernel2(
         }
         __syncthreads();
 
+#pragma unroll
         for (int ki = 0; ki < TILE_K; ++ki) {
             *(reinterpret_cast<float4 *>(lreg)) = lbuff[ty][ki];
             *(reinterpret_cast<float4 *>(rreg)) = rbuff[ki][tx];
+#pragma unroll
             for (int i = 0; i < 4; ++i) {
+#pragma unroll
                 for (int j = 0; j < 4; ++j) {
                     reg[i][j] += lreg[i] * rreg[j];
                 }
@@ -129,7 +134,9 @@ __global__ void GemmKernel2(
         k_offset += TILE_K;
     }
     if (m_offset + TILE_M <= M && n_offset + TILE_N <= N) {
+#pragma unroll
         for (int i = 0; i < 4; ++i) {
+#pragma unroll
             for (int j = 0; j < 4; ++j) {
                 int mi = m_offset + i * BY + ty;
                 int ni = n_offset + j * BX + tx;
@@ -137,7 +144,9 @@ __global__ void GemmKernel2(
             }
         }
     } else {
+#pragma unroll
         for (int i = 0; i < 4; ++i) {
+#pragma unroll
             for (int j = 0; j < 4; ++j) {
                 int mi = m_offset + i * BY + ty;
                 int ni = n_offset + j * BX + tx;
@@ -272,5 +281,41 @@ void gemm3(const int M, const int N, const int K, const float* A, const float* B
     dim3 grid((N+TILE_N-1) / TILE_N, (M+TILE_M-1) / TILE_M);
     GemmKernel3<float, WM, WN, WK, WarpM, WarpN, TILE_M, TILE_N, TILE_K><<<grid, block_size, shared_size, stream>>>(M, N, K, C, A, B);
     CudaRunCheck(cudaGetLastError());
+}
+
+
+void gemm4(const int M, const int N, const int K, const float* A, const float* B, float* C, cudaStream_t stream) {
+    using Layout = cutlass::layout::RowMajor;
+    using ElementA = float;
+    using ElementB = float;
+    using ElementC = float;
+
+    using Gemm = cutlass::gemm::device::Gemm<
+        ElementA,
+        Layout,
+        ElementB,
+        Layout,
+        ElementC,
+        Layout
+    >;  
+    Gemm gemm_op;
+   
+   cutlass::gemm::GemmCoord problem_size(M, N, K);
+   typename Gemm::Arguments arguments {
+        problem_size,
+        {A, K},
+        {B, N},
+        {C, N},
+        {C, N},
+        {1.0f, 0.0f}
+   };
+
+    // Launch the GEMM operation
+    cutlass::Status status = gemm_op(arguments, stream);
+
+    if (status != cutlass::Status::kSuccess) {
+        std::cerr << "GEMM operation failed" << std::endl;
+        exit(EXIT_FAILURE);
+    }
 }
 
