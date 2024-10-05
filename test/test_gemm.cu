@@ -34,7 +34,7 @@ int TestGemm(const int M, const int N, const int K, const int method_id = 0, con
     using GemmFun = 
         std::function<void(const int, const int, const int, const float *,
                     const float *, float *, cudaStream_t)>;
-    std::vector<GemmFun> fun_list{gemm0, gemm1, gemm2};
+    std::vector<GemmFun> fun_list{gemm0, gemm1, gemm2, gemm3};
     std::vector<GPUTensor<float> *> io_list{&A, &B, &C};
     auto call_fun = [&](const std::vector<GPUTensor<float> *> io_list) {
         (fun_list[method_id])(M, N, K, io_list[0]->get_data("cuda"), io_list[1]->get_data("cuda"), io_list[2]->get_data("cuda"), stream);

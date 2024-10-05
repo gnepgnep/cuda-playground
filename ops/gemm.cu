@@ -6,6 +6,10 @@ gemm3: using tensor core
 gemm4: increase op/mem access of gemm4
 */
 #include "kernels.cuh"
+#include <mma.h>
+#include <cuda_fp16.h>
+
+using namespace nvcuda;
 
 template <typename T>
 __global__ void GemmKernel0(const int M, const int N, const int K, T* C, const T* A, const T* B) {
@@ -153,3 +157,120 @@ void gemm2(const int M, const int N, const int K, const float* A, const float* B
     GemmKernel2<float, BXY, BXY, TILE, TILE, BXY><<<grid, block, 0, stream>>>(M, N, K, C, A, B);
     CudaRunCheck(cudaGetLastError());
 }
+
+template <typename T, int TILE_M, int TILE_N, int TILE_K>
+struct ABShared {
+    T lbuff[TILE_M][TILE_K];
+    T rbuff[TILE_K][TILE_N];
+};
+
+template <typename T, int TILE_M, int TILE_N>
+struct CShared {
+    T cbuff[TILE_M][TILE_N];
+};
+
+extern __shared__ int8_t shared_buff[];
+template <typename T, int WM = 16, int WN = 16, int WK = 16, int WarpM = 4, int WarpN = 4, int TILE_M = WM * WarpM, int TILE_N = WN * WarpN, int TILE_K = WK>
+__global__ void GemmKernel3(
+    const int M, const int N, const int K, 
+    T *__restrict__ C, const T *__restrict__ A, const T *__restrict__ B) {
+
+    using ABSharedType = ABShared<half, TILE_M, TILE_N, TILE_K>;
+    using CSharedType = CShared<float, TILE_M, TILE_N>;
+    ABSharedType *ab_shared = reinterpret_cast<ABSharedType *>(shared_buff);
+    CSharedType *c_shared = reinterpret_cast<CSharedType *>(shared_buff);
+    auto &lbuff = ab_shared->lbuff;
+    auto &rbuff = ab_shared->rbuff;
+    auto &cbuff = c_shared->cbuff;
+
+    int tid = threadIdx.x;
+    int warp_id = tid >> 5;
+    int warp_mid = warp_id / WarpN;
+    int warp_nid = warp_id - warp_mid * WarpN;
+
+    int m_offset = blockIdx.y * TILE_M;
+    int n_offset = blockIdx.x * TILE_N;
+    int k_offset = 0;
+
+    wmma::fragment<wmma::matrix_a, WM, WN, WK, half, wmma::row_major> a_frag;
+    wmma::fragment<wmma::matrix_b, WM, WN, WK, half, wmma::row_major> b_frag;
+    wmma::fragment<wmma::accumulator, WM, WN, WK, float> acc_frag;
+    wmma::fill_fragment(acc_frag, 0.0f);
+
+    while (k_offset < K) {
+        if (m_offset + TILE_M <= M && n_offset + TILE_N <= N && k_offset + TILE_K <= K) {
+            // load A
+            for (int id = tid; id < TILE_K * TILE_M; id += blockDim.x) {
+                int m = id / TILE_K;
+                int k = id % TILE_K;
+                lbuff[m][k] = (half)A[(m_offset + m) * K + k_offset + k];
+            }
+            // load B
+            for (int id = tid; id < TILE_K * TILE_N; id += blockDim.x) {
+                int n = id / TILE_K;
+                int k = id % TILE_K;
+                rbuff[k][n] = (half)B[(k_offset + k) * N + n_offset + n];
+            }
+        } else {
+            // load A
+            for (int id = tid; id < TILE_K * TILE_M; id += blockDim.x) {
+                int m = id / TILE_K;
+                int k = id % TILE_K;
+                lbuff[m][k] = (m_offset + m < M && k_offset + k < K) ? (half)A[(m_offset + m) * K + k_offset + k] :  (half)0.0f;
+            }
+            // load B
+            for (int id = tid; id < TILE_K * TILE_N; id += blockDim.x) {
+                int n = id / TILE_K;
+                int k = id % TILE_K;
+                rbuff[k][n] = (n_offset + n < N && k_offset + k < K) ? (half)B[(k_offset + k) * N + n_offset + n] : (half)0.0f;
+            }
+        }
+        __syncthreads();
+        wmma::load_matrix_sync(a_frag, (half*)lbuff + (warp_mid * WM) * TILE_K, TILE_K);
+        wmma::load_matrix_sync(b_frag, (half*)rbuff + warp_nid * WN, TILE_N);
+        wmma::mma_sync(acc_frag, a_frag, b_frag, acc_frag);
+        k_offset += TILE_K;
+        __syncthreads();
+    }
+    wmma::store_matrix_sync((float*)cbuff + (warp_mid * WN) * TILE_N + warp_nid * WN, acc_frag, TILE_N, wmma::mem_row_major);
+    __syncthreads();
+    
+    auto cur_C = C + m_offset * N + n_offset;
+    if (m_offset + TILE_M <= M && n_offset + TILE_N <= N) {
+        for (int id = tid; id < TILE_M * TILE_N; id += blockDim.x) {
+            int m = id / TILE_N;
+            int n = id % TILE_N;
+            cur_C[m * N + n] = (T)cbuff[m][n];
+        }
+    } else {
+        for (int id = tid; id < TILE_M * TILE_N; id += blockDim.x) {
+            int m = id / TILE_N;
+            int n = id % TILE_N;
+            cur_C[m * N + n] = (T)cbuff[m][n];
+        }
+    }
+}
+
+
+void gemm3(const int M, const int N, const int K, const float* A, const float* B, float* C, cudaStream_t stream) {
+    constexpr int WM = 16;
+    constexpr int WN = 16;
+    constexpr int WK = 16;
+    constexpr int WarpM = 4;
+    constexpr int WarpN = 4;
+    constexpr int TILE_M = WM * WarpM;
+    constexpr int TILE_N = WN * WarpN;
+    constexpr int TILE_K = WK;
+    int ab_shared_size = sizeof(half) * (TILE_M + TILE_K) * (TILE_N + TILE_K);
+    int c_shared_size = sizeof(float) * TILE_M * TILE_N;
+    int shared_size = std::max(ab_shared_size, c_shared_size);
+    if (shared_size > 48 * 1024) {
+        printf("shared memory size: %d KB, exceeds the limit: 48 KB\n", shared_size / 1024);
+        exit(EXIT_FAILURE);
+    }
+    int block_size = WarpM * WarpN * 32;
+    dim3 grid((N+TILE_N-1) / TILE_N, (M+TILE_M-1) / TILE_M);
+    GemmKernel3<float, WM, WN, WK, WarpM, WarpN, TILE_M, TILE_N, TILE_K><<<grid, block_size, shared_size, stream>>>(M, N, K, C, A, B);
+    CudaRunCheck(cudaGetLastError());
+}
+

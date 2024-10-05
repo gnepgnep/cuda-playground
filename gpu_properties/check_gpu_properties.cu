@@ -26,6 +26,7 @@ int main ()
     printf("Num of Blocks in y:  %d \n", properties.maxGridSize[1]);
     printf("Num of Blocks in z:  %d \n", properties.maxGridSize[2]);
     printf("Compute Capability:  %d.%d \n", properties.major, properties.minor);
+    printf("Shared Memory per Block: %.2f KB\n", properties.sharedMemPerBlock / 1024.0);
 
     return 0;
 }
