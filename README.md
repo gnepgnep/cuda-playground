@@ -30,5 +30,5 @@
         - gemm1 (with shared memory)
         - gemm2 (with register and compact shared mem access: using float4)
         - gemm3 (using tensor core)
-        - gemm4 (increase op/mem access of gemm4)
+        - gemm4 (using cutlass)
 - test: test kernel consistency and time
